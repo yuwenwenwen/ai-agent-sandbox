@@ -1,0 +1,26 @@
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Environment variables and API keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local databases and runtime data
+*.db
+*.sqlite3
+logs/
+sandbox_data/
+workspace/
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
