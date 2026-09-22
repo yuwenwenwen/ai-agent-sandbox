@@ -1,5 +1,12 @@
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from docker.errors import DockerException, NotFound
+
+from sandbox_manager import (
+    create_sandbox,
+    list_sandboxes,
+    delete_sandbox,
+)
 
 app = FastAPI(title="AI Agent Sandbox")
 
@@ -12,3 +19,46 @@ def home():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.post("/sandboxes")
+def create():
+    try:
+        return create_sandbox()
+    except DockerException:
+        raise HTTPException(
+            status_code=503,
+            detail="Docker service unavailable",
+        )
+
+
+@app.get("/sandboxes")
+def list_all():
+    try:
+        return list_sandboxes()
+    except DockerException:
+        raise HTTPException(
+            status_code=503,
+            detail="Docker service unavailable",
+        )
+
+
+@app.delete("/sandboxes/{sandbox_id}")
+def delete(sandbox_id: str):
+    try:
+        return delete_sandbox(sandbox_id)
+    except NotFound:
+        raise HTTPException(
+            status_code=404,
+            detail="Sandbox not found",
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid sandbox",
+        )
+    except DockerException:
+        raise HTTPException(
+            status_code=503,
+            detail="Docker service unavailable",
+        )
