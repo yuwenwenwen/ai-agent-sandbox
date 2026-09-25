@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Agent Sandbox</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 0 20px;
+      background: #f5f7fb;
+    }
+    h1 { color: #26354a; }
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .create { background: #2563eb; color: white; }
+    .delete { background: #dc2626; color: white; }
+    .sandbox {
+      background: white;
+      padding: 18px;
+      margin-top: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px #00000012;
+      overflow-wrap: anywhere;
+    }
+    .status { color: #15803d; }
+    #message { margin: 15px 0; }
+  </style>
+</head>
+<body>
+  <h1>AI Agent Sandbox</h1>
+  <p>建立及管理隔離的 Docker Sandbox</p>
+
+  <button class="create" id="createBtn"
+          onclick="createSandbox()">
+    + Create Sandbox
+  </button>
+
+  <p id="message"></p>
+  <h2>Sandbox List</h2>
+  <div id="sandboxList">載入中...</div>
+
+  <script>
+    const API = "/sandboxes";
+
+    function showMessage(text) {
+      document.getElementById("message").textContent = text;
+    }
+
+    async function loadSandboxes() {
+      const list = document.getElementById("sandboxList");
+
+      try {
+        const response = await fetch(API);
+        if (!response.ok) throw new Error("無法取得清單");
+
+        const sandboxes = await response.json();
+        list.replaceChildren();
+
+        if (sandboxes.length === 0) {
+          list.textContent = "目前沒有 Sandbox";
+          return;
+        }
+
+        for (const sandbox of sandboxes) {
+          const card = document.createElement("div");
+          card.className = "sandbox";
+
+          const id = document.createElement("p");
+          id.textContent = "ID: " + sandbox.id;
+
+          const status = document.createElement("p");
+          status.className = "status";
+          status.textContent = "Status: " + sandbox.status;
+
+          const button = document.createElement("button");
+          button.className = "delete";
+          button.textContent = "Delete";
+          button.onclick = () => deleteSandbox(sandbox.id);
+
+          card.append(id, status, button);
+          list.appendChild(card);
+        }
+      } catch (error) {
+        showMessage("載入失敗：" + error.message);
+      }
+    }
+
+    async function createSandbox() {
+      const button = document.getElementById("createBtn");
+      button.disabled = true;
+      showMessage("正在建立 Sandbox...");
+
+      try {
+        const response = await fetch(API, {
+          method: "POST"
+        });
+        if (!response.ok) throw new Error("建立失敗");
+
+        showMessage("Sandbox 建立成功！");
+        await loadSandboxes();
+      } catch (error) {
+        showMessage(error.message);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function deleteSandbox(id) {
+      if (!confirm("確定刪除這個 Sandbox？")) return;
+
+      try {
+        const response = await fetch(
+          API + "/" + encodeURIComponent(id),
+          { method: "DELETE" }
+        );
+        if (!response.ok) throw new Error("刪除失敗");
+
+        showMessage("Sandbox 已刪除");
+        await loadSandboxes();
+      } catch (error) {
+        showMessage(error.message);
+      }
+    }
+
+    loadSandboxes();
+  </script>
+</body>
+</html>

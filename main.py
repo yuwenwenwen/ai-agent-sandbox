@@ -1,6 +1,9 @@
 
 from fastapi import FastAPI, HTTPException
 from docker.errors import DockerException, NotFound
+from fastapi.responses import FileResponse
+
+
 
 from sandbox_manager import (
     create_sandbox,
@@ -41,6 +44,10 @@ def list_all():
             status_code=503,
             detail="Docker service unavailable",
         )
+
+@app.get("/ui")
+def frontend():
+    return FileResponse("static/index.html")
 
 
 @app.delete("/sandboxes/{sandbox_id}")
