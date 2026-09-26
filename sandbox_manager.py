@@ -68,3 +68,46 @@ def delete_sandbox(sandbox_id: str):
         "id": sandbox_id,
         "status": "deleted",
     }
+
+import re
+import subprocess
+
+def execute_python(sandbox_id: str, code: str):
+    # 確認 Sandbox ID 格式
+    if not re.fullmatch(r"[0-9a-fA-F-]{36}", sandbox_id):
+        raise ValueError("Invalid sandbox ID")
+
+    if not code.strip() or len(code) > 4096:
+        raise ValueError("Code must be 1–4096 characters")
+
+    client = get_docker_client()
+    container = client.containers.get(
+        f"sandbox-{sandbox_id}"
+    )
+
+    # 避免操作不屬於本專案的容器
+    if container.labels.get("app") != LABEL:
+        raise ValueError("Not a managed sandbox")
+
+    if container.status != "running":
+        raise ValueError("Sandbox is not running")
+
+    # 使用容器內的 timeout 限制 Python 執行時間
+    result = subprocess.run(
+        [
+            "docker", "exec",
+            container.id,
+            "timeout", "-s", "KILL", "5s",
+            "python", "-c", code,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=8,
+    )
+
+    return {
+        "sandbox_id": sandbox_id,
+        "exit_code": result.returncode,
+        "stdout": result.stdout[:10000],
+        "stderr": result.stderr[:10000],
+    }
