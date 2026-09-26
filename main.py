@@ -4,6 +4,8 @@ from docker.errors import DockerException, NotFound
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from subprocess import TimeoutExpired
+from pydantic import BaseModel
+from agent import generate_python
 
 
 
@@ -12,6 +14,7 @@ from sandbox_manager import (
     list_sandboxes,
     delete_sandbox,
     execute_python,
+    list_sandbox_files,
 )
 
 app = FastAPI(title="AI Agent Sandbox")
@@ -104,4 +107,55 @@ def execute(sandbox_id: str, request: ExecuteRequest):
         raise HTTPException(
             status_code=503,
             detail="Docker service unavailable",
+        )
+
+class AgentRequest(BaseModel):
+    task: str
+
+
+@app.post("/agent/generate")
+def generate(request: AgentRequest):
+    if not request.task.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="請輸入任務",
+        )
+
+    try:
+        code = generate_python(request.task)
+        return {"code": code}
+    except ValueError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=str(error),
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Gemini API 呼叫失敗",
+        )
+
+@app.get("/sandboxes/{sandbox_id}/files")
+def get_sandbox_files(sandbox_id: str):
+    try:
+        return list_sandbox_files(sandbox_id)
+    except NotFound:
+        raise HTTPException(
+            status_code=404,
+            detail="Sandbox not found",
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
+    except DockerException:
+        raise HTTPException(
+            status_code=503,
+            detail="Docker service unavailable",
+        )
+    except RuntimeError:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to list files",
         )

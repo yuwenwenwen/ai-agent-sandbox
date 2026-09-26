@@ -111,3 +111,34 @@ def execute_python(sandbox_id: str, code: str):
         "stdout": result.stdout[:10000],
         "stderr": result.stderr[:10000],
     }
+
+def list_sandbox_files(sandbox_id: str):
+    client = get_docker_client()
+
+    container = client.containers.get(
+        f"sandbox-{sandbox_id}"
+    )
+
+    if container.labels.get("app") != LABEL:
+        raise ValueError("Not a managed sandbox")
+
+    if container.status != "running":
+        raise ValueError("Sandbox is not running")
+
+    result = container.exec_run(
+        ["python", "-c",
+         "import os, json; "
+         "print(json.dumps(sorted(os.listdir('/tmp'))))"],
+        demux=True,
+    )
+
+    if result.exit_code != 0:
+        raise RuntimeError("Failed to list files")
+
+    stdout, _ = result.output
+
+    import json
+    return {
+        "sandbox_id": sandbox_id,
+        "files": json.loads(stdout.decode("utf-8")),
+    }
