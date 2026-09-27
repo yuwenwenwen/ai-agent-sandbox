@@ -23,8 +23,12 @@ def generate_python(task: str) -> str:
                 "Return only executable Python code. "
                 "Do not include Markdown code fences or explanations. "
                 "Use only the Python standard library. "
-                "Do not access the network, read secrets, "
-                "or modify files outside /tmp."
+                "Do not access the network or read secrets. "
+                "Use /workspace as the default working directory. "
+                "Create and save all user-generated files in /workspace. "
+                "If the user does not specify a file path, save the file in /workspace. "
+                "Do not use /tmp for user-generated files. "
+                "Do not modify files outside /workspace."
             ),
             temperature=0.2,
         ),

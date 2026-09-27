@@ -1,5 +1,5 @@
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from docker.errors import DockerException, NotFound
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -15,6 +15,8 @@ from sandbox_manager import (
     delete_sandbox,
     execute_python,
     list_sandbox_files,
+    upload_sandbox_file,
+    list_workspace_files,
 )
 
 app = FastAPI(title="AI Agent Sandbox")
@@ -159,3 +161,36 @@ def get_sandbox_files(sandbox_id: str):
             status_code=500,
             detail="Failed to list files",
         )
+
+@app.post("/sandboxes/{sandbox_id}/files")
+async def upload_file_to_sandbox(sandbox_id: str, file: UploadFile = File(...)):
+    # Read at most 5 MB + 1 byte to reject oversized uploads.
+    content = await file.read(5 * 1024 * 1024 + 1)
+    try:
+        return upload_sandbox_file(sandbox_id, file.filename or "", content)
+    except NotFound:
+        raise HTTPException(status_code=404, detail="Sandbox not found")
+    except FileExistsError as error:
+        raise HTTPException(status_code=409, detail=str(error))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    except DockerException:
+        raise HTTPException(status_code=503, detail="Docker service unavailable")
+    except RuntimeError as error:
+        raise HTTPException(status_code=500, detail=str(error))
+    finally:
+        await file.close()
+
+
+@app.get("/sandboxes/{sandbox_id}/workspace-files")
+def get_workspace_files(sandbox_id: str):
+    try:
+        return list_workspace_files(sandbox_id)
+    except NotFound:
+        raise HTTPException(status_code=404, detail="Sandbox not found")
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    except DockerException:
+        raise HTTPException(status_code=503, detail="Docker service unavailable")
+    except RuntimeError as error:
+        raise HTTPException(status_code=500, detail=str(error))
