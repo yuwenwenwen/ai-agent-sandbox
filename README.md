@@ -249,3 +249,33 @@ http://localhost:5173
 - 檔案下載與刪除
 - Execution history / log
 - 更完整的錯誤處理
+
+## for yuwen
+
+### Linux 指令
+
+把資料夾在vscode開啟
+```
+code .
+```
+開啟資料夾路徑
+```
+explorer.exe .
+\\wsl$\Ubuntu\home\tiffany\ai-agent-sandbox
+```
+確認docker連線
+```
+docker ps
+```
+
+### 啟動 FastAPI 後端(ubuntu 1)
+```
+cd ~/ai-agent-sandbox
+source .venv/bin/activate
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
+### 啟動 Vue 前端(ubuntu 2)
+```
+cd ~/ai-agent-sandbox/frontend
+npm run dev
+```
